@@ -1,49 +1,37 @@
 require_relative 'tables'
 $custom_symbol = Hash.new
 $custom_symbol_memory_index = 16
+$rom_location = 0
 
-def user_defined_symbol_handling(str)
-  if str.count("0-9") == 0 && str[0] == "@"    #Checks if string has a number in it and first letter is @
-    str = str[1..-1]
+def a_command(str, symbol)
+  str = str[1..-1]
+  if str.count("0-9") == 0 #Checks if string has a number in it
     $custom_symbol[str] = $custom_symbol_memory_index
     $custom_symbol_memory_index += 1 #increments index
+  elsif str.scan(/\D/).empty? #checks if string contains only ints (if it doesn't, we're going to assume it's a symbol of some kind)
+    str = str.to_i
+    address = str.to_s(2).rjust(16,"0") #convert int to binary string & add zeros until 16 bits
+  elsif str[0] == "R" #It's a predefined symbol (R0, R1, etc)
+    str = symbol[str]
+    str = str.to_i
+    address = str.to_s(2).rjust(16,"0") #convert int to binary string & add zeros until 16 bits
+  else
+    if $custom_symbol[str] != nil
+      address = $custom_symbol[str]
+      address = address.to_i
+      address = address.to_s(2).rjust(16,"0")
+    else
+      $custom_symbol[str] = $custom_symbol_memory_index
+      $custom_symbol_memory_index += 1
+      address = $custom_symbol[str]
+      address = address.to_s(2).rjust(16,"0")
+    end
   end
+  return address
 end
 
-def parse_command(str, comp, dest, jump, symbol)
-  a_command = false
-  address =
-  if str[0] == "@" #Check if A or C instruction
-    a_command = true
-    str = str[1..-1]
-  else
-    a_command = false
-  end
-
-  if str[0] == "(" #(SYMBOL) format
-    str.slice!(0)
-    str.slice!(-1) #Delete first and last character removing ()
-    memory_address = $custom_symbol[str]
-    memory_address = memory_address.to_i
-    address = memory_address.to_s(2).rjust(16,"0")
-
-  elsif a_command == true #Do this if it's an A-command
-    if str.scan(/\D/).empty? #checks if string contains only ints (if it doesn't, we're going to assume it's a symbol of some kind)
-      str = str.to_i
-      address = str.to_s(2).rjust(16,"0") #convert int to binary string & add zeros until 16 bits
-    elsif str[0] == "R" #It's a predefined symbol (R0, R1, etc)
-      str = symbol[str]
-      str = str.to_i
-      address = str.to_s(2).rjust(16,"0") #convert int to binary string & add zeros until 16 bits
-    else
-      p str #TODO: Doesn't match the build in assembler binary value
-      memory_address = $custom_symbol[str]
-      memory_address = memory_address.to_i
-      address = memory_address.to_s(2).rjust(16,"0")
-      p address
-    end
-    #puts address
-  else #Do this if it's a C-command
+def c_command(str, comp, dest, jump)
+  p str
     address = "111"
     if str[2] != "J" #If no jump
       str = str.strip.split("=")
@@ -56,8 +44,26 @@ def parse_command(str, comp, dest, jump, symbol)
       address = address + dest["null"]
       address = address + jump[str[1]]
     end
+    return address
   end
-  #p address
+
+def user_defined_symbol_handling(str, rom_location)
+  if str[0] == "(" #(SYMBOL) format
+    str.slice!(0)
+    str.slice!(-1) #Delete first and last character removing ()
+    $custom_symbol[str] = rom_location
+  else
+    rom_location += 1
+  end
+end
+
+def parse_command(str, comp, dest, jump, symbol)
+  address = 0
+  if str[0] == "@" #Check if A or C instruction
+    address = a_command(str, symbol)
+  elsif str[0] != "(" && $custom_symbol[str] == nil
+    address = c_command(str, comp, dest, jump)
+  end
   return address
 end
 
@@ -71,10 +77,9 @@ assembly_array = assembly_array.map { |item| item.sub /\/\/(.*)/, ''} #Removes c
 assembly_array = assembly_array.map { |item| item.strip } #Removes comments
 assembly_array.each {|item| item.chomp!} #Removes \n and \r
 assembly_array.delete("") #Removes empty elements from array
-#puts assembly_array
 
 #First Pass
-assembly_array.each {|item| user_defined_symbol_handling(item)}
+assembly_array.each {|item| user_defined_symbol_handling(item, assembly_array.index(item))}
 #Second Pass
 assembly_array = assembly_array.map { |item| parse_command(item, COMP, DEST, JUMP, PREDEFINED_SYMBOLS) }
 
