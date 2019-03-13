@@ -14,6 +14,7 @@ def a_command(str, symbol)
     address = str.to_s(2).rjust(16,"0") #convert int to binary string & add zeros until 16 bits
   else
     if $custom_symbol[str] != nil
+      p $rom_location
       address = $custom_symbol[str]
       address = address.to_i
       address = address.to_s(2).rjust(16,"0")
@@ -48,9 +49,10 @@ def user_defined_symbol_handling(str, rom_location)
     str.slice!(0)
     str.slice!(-1) #Delete first and last character removing ()
     $custom_symbol[str] = rom_location
+    p $rom_location
     return ""
   else
-    rom_location += 1
+    $rom_location += 1
     return str
   end
 end
@@ -58,9 +60,7 @@ end
 def parse_command(str, comp, dest, jump, symbol)
   address = 0
   if str[0] == "@" #Check if A or C instruction
-    puts "HAVE A COMMAND: #{str}"
     address = a_command(str, symbol)
-    puts address
   elsif str[0] != "(" && $custom_symbol[str] == nil
     address = c_command(str, comp, dest, jump)
   end
