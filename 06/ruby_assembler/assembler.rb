@@ -5,10 +5,7 @@ $rom_location = 0
 
 def a_command(str, symbol)
   str = str[1..-1]
-  if str.count("0-9") == 0 #Checks if string has a number in it
-    $custom_symbol[str] = $custom_symbol_memory_index
-    $custom_symbol_memory_index += 1 #increments index
-  elsif str.scan(/\D/).empty? #checks if string contains only ints (if it doesn't, we're going to assume it's a symbol of some kind)
+  if str.scan(/\D/).empty? #checks if string contains only ints (if it doesn't, we're going to assume it's a symbol of some kind)
     str = str.to_i
     address = str.to_s(2).rjust(16,"0") #convert int to binary string & add zeros until 16 bits
   elsif str[0] == "R" #It's a predefined symbol (R0, R1, etc)
@@ -31,7 +28,6 @@ def a_command(str, symbol)
 end
 
 def c_command(str, comp, dest, jump)
-  p str
     address = "111"
     if str[2] != "J" #If no jump
       str = str.strip.split("=")
@@ -52,15 +48,19 @@ def user_defined_symbol_handling(str, rom_location)
     str.slice!(0)
     str.slice!(-1) #Delete first and last character removing ()
     $custom_symbol[str] = rom_location
+    return ""
   else
     rom_location += 1
+    return str
   end
 end
 
 def parse_command(str, comp, dest, jump, symbol)
   address = 0
   if str[0] == "@" #Check if A or C instruction
+    puts "HAVE A COMMAND: #{str}"
     address = a_command(str, symbol)
+    puts address
   elsif str[0] != "(" && $custom_symbol[str] == nil
     address = c_command(str, comp, dest, jump)
   end
@@ -73,16 +73,19 @@ f = File.open("Max.asm")
 f.each_line { |line| assembly_array << line }
 f.close
 
+#Array Cleanup
 assembly_array = assembly_array.map { |item| item.sub /\/\/(.*)/, ''} #Removes comments
 assembly_array = assembly_array.map { |item| item.strip } #Removes comments
 assembly_array.each {|item| item.chomp!} #Removes \n and \r
 assembly_array.delete("") #Removes empty elements from array
 
 #First Pass
-assembly_array.each {|item| user_defined_symbol_handling(item, assembly_array.index(item))}
+assembly_array = assembly_array.map {|item| user_defined_symbol_handling(item, assembly_array.index(item))}
+assembly_array.delete("") #Removes empty elements from array
+
 #Second Pass
-assembly_array = assembly_array.map { |item| parse_command(item, COMP, DEST, JUMP, PREDEFINED_SYMBOLS) }
+binary_array = assembly_array.map { |item| parse_command(item, COMP, DEST, JUMP, PREDEFINED_SYMBOLS) }
 
 binary_file = File.new("out.hack", "w")
-binary_file.puts(assembly_array)
+binary_file.puts(binary_array)
 binary_file.close
