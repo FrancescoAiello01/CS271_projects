@@ -48,7 +48,6 @@ def user_defined_symbol_handling(str, rom_location)
     str.slice!(0)
     str.slice!(-1) #Delete first and last character removing ()
     $custom_symbol[str] = $rom_location
-    p $rom_location
     return ""
   else
     $rom_location += 1
@@ -81,9 +80,6 @@ assembly_array.delete("") #Removes empty elements from array
 #First Pass
 assembly_array = assembly_array.map {|item| user_defined_symbol_handling(item, assembly_array.index(item))}
 assembly_array.delete("") #Removes empty elements from array
-
-p $rom_location
-p $custom_symbol
 
 #Second Pass
 binary_array = assembly_array.map { |item| parse_command(item, COMP, DEST, JUMP, PREDEFINED_SYMBOLS) }
