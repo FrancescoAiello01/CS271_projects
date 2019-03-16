@@ -14,7 +14,6 @@ def a_command(str, symbol)
     address = str.to_s(2).rjust(16,"0") #convert int to binary string & add zeros until 16 bits
   else
     if $custom_symbol[str] != nil
-      p $rom_location
       address = $custom_symbol[str]
       address = address.to_i
       address = address.to_s(2).rjust(16,"0")
@@ -48,7 +47,7 @@ def user_defined_symbol_handling(str, rom_location)
   if str[0] == "(" #(SYMBOL) format
     str.slice!(0)
     str.slice!(-1) #Delete first and last character removing ()
-    $custom_symbol[str] = rom_location
+    $custom_symbol[str] = $rom_location
     p $rom_location
     return ""
   else
@@ -69,7 +68,7 @@ end
 
 assembly_array = []
 
-f = File.open("Max.asm")
+f = File.open(ARGV[0])
 f.each_line { |line| assembly_array << line }
 f.close
 
@@ -82,6 +81,9 @@ assembly_array.delete("") #Removes empty elements from array
 #First Pass
 assembly_array = assembly_array.map {|item| user_defined_symbol_handling(item, assembly_array.index(item))}
 assembly_array.delete("") #Removes empty elements from array
+
+p $rom_location
+p $custom_symbol
 
 #Second Pass
 binary_array = assembly_array.map { |item| parse_command(item, COMP, DEST, JUMP, PREDEFINED_SYMBOLS) }
